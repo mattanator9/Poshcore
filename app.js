@@ -1,4 +1,4 @@
-const API_URL = "https://millennium-favorite-rings-statewide.trycloudflare.com";
+const API_URL = "https://retailer-white-lamp-surrey.trycloudflare.com";
 
 const App = {
     user: JSON.parse(localStorage.getItem('user')),
@@ -1488,3 +1488,4 @@ checkBanner: async () => {
     }
 };
 window.onload = App.init;
+
