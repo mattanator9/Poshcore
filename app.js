@@ -1,4 +1,4 @@
-const API_URL = "https://retailer-white-lamp-surrey.trycloudflare.com";
+const API_URL = "https://millennium-favorite-rings-statewide.trycloudflare.com";
 
 const App = {
     user: JSON.parse(localStorage.getItem('user')),
@@ -256,7 +256,7 @@ router: () => {
     },
 
     // --- AUTHENTICATION ---
- handleAuth: async (e) => { 
+    handleAuth: async (e) => { 
         e.preventDefault(); 
         const u = document.getElementById('auth-user').value; 
         const p = document.getElementById('auth-pass').value; 
@@ -268,13 +268,8 @@ router: () => {
         
         if (App.isReg) {
             const dob = document.getElementById('auth-dob').value;
-            const inviteCode = document.getElementById('auth-invite').value;
-            
             if(!dob) return App.alert("Date of Birth is required.");
-            if(!inviteCode) return App.alert("Invite Code is required.");
-            
             body.dob = dob;
-            body.inviteCode = inviteCode;
             
             if (typeof hcaptcha !== 'undefined') {
                 const captchaToken = hcaptcha.getResponse();
@@ -324,7 +319,6 @@ router: () => {
         document.getElementById('auth-title').innerText = App.isReg ? 'Create Account' : 'Sign In'; 
         document.getElementById('auth-terms').style.display = App.isReg ? 'flex' : 'none'; 
         document.getElementById('auth-dob-container').style.display = App.isReg ? 'block' : 'none';
-        document.getElementById('auth-invite-container').style.display = App.isReg ? 'block' : 'none';
         const cap = document.getElementById('captcha-container'); 
         if(cap){
             cap.style.display = App.isReg ? 'flex' : 'none';
@@ -1353,8 +1347,6 @@ createStudio: async (e, existingId = null) => {
     toggleNavDropdown: (e) => { e.stopPropagation(); document.getElementById('nav-dropdown').classList.toggle('hidden'); },
     renderNav: () => { 
         const nav = document.getElementById('nav-auth'); 
-        if (!nav) return;
-
         if (App.user) { 
             nav.innerHTML = `
             <div class="flex items-center gap-4 relative">
@@ -1362,7 +1354,6 @@ createStudio: async (e, existingId = null) => {
                     <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                     <span id="mail-count" class="hidden absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white shadow-sm">0</span>
                 </button>
-
                 <div class="relative">
                     <button onclick="App.toggleNavDropdown(event)" class="flex items-center gap-2 hover:opacity-80 transition focus:outline-none">
                         <div class="relative">
@@ -1370,13 +1361,11 @@ createStudio: async (e, existingId = null) => {
                             ${App.renderStatusDot(App.user.status || 'online')}
                         </div>
                     </button>
-
-                    <div id="nav-dropdown" class="hidden absolute right-0 mt-3 w-52 bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-50 dropdown-enter origin-top-right">
+                    <div id="nav-dropdown" class="hidden absolute right-0 mt-3 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-50 dropdown-enter origin-top-right">
                         <div class="px-4 py-3 border-b border-slate-50 mb-1">
                             <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Signed in as</p>
                             <p class="text-sm font-bold text-slate-900 truncate">${App.escapeHTML(App.user.username)}</p>
                         </div>
-
                         <div class="px-4 py-2 border-b border-slate-50">
                             <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Status</p>
                             <div class="flex gap-2">
@@ -1385,27 +1374,14 @@ createStudio: async (e, existingId = null) => {
                                 <button onclick="App.setStatus('dnd')" title="Do Not Disturb" class="w-4 h-4 rounded-full bg-red-500 hover:scale-110 transition border border-white shadow-sm"></button>
                             </div>
                         </div>
-
                         <a href="#user/${App.user.username}" onclick="document.getElementById('nav-dropdown').classList.add('hidden')" class="block px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-purple-600 transition">Profile</a>
                         <a href="#mystuff" onclick="document.getElementById('nav-dropdown').classList.add('hidden')" class="block px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-purple-600 transition">My Stuff</a>
-                        
-                        <button onclick="App.showInvites()" class="w-full text-left px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-purple-600 transition flex items-center gap-2">
-                            <span>🎟️</span> Invite Friends
-                        </button>
-
-                        <div class="border-t border-slate-50 my-1"></div>
-
-                        ${App.user.is_mod ? `
-                            <button onclick="App.openModMenu(); document.getElementById('nav-dropdown').classList.add('hidden')" class="w-full text-left px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-50 transition flex items-center gap-2">
-                                <span>🛡️</span> Mod Menu
-                            </button>
-                        ` : ''}
-
-                        <button onclick="App.showGuidelines(); document.getElementById('nav-dropdown').classList.add('hidden')" class="w-full text-left px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 transition">Rules</button>
-                        <button onclick="App.logout()" class="w-full text-left px-4 py-2 text-sm font-bold text-red-400 hover:bg-red-50 hover:text-red-600 transition mt-1">Logout</button>
+                        ${App.user.is_mod ? `<button onclick="App.openModMenu();document.getElementById('nav-dropdown').classList.add('hidden')" class="w-full text-left px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-50 transition">🛡️ Mod Menu</button>` : ''}
+                        <button onclick="App.manageBlocked()" class="hidden w-full text-left px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-purple-600 transition">Blocked Users</button>
+                        <button onclick="App.showGuidelines(); document.getElementById('nav-dropdown').classList.add('hidden')" class="w-full text-left px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-purple-600 transition">Rules</button>
+                        <button onclick="App.logout()" class="w-full text-left px-4 py-2 text-sm font-bold text-red-400 hover:bg-red-50 hover:text-red-600 transition">Logout</button>
                     </div>
                 </div>
-
                 <div id="mail-modal" class="hidden absolute top-12 right-0 w-80 bg-white shadow-xl rounded-xl border border-slate-100 p-4 z-[60] dropdown-enter">
                     <h3 class="font-bold mb-3 flex justify-between text-slate-900">Notifications <button onclick="App.toggleMail()" class="text-slate-400 hover:text-slate-600">×</button></h3>
                     <div id="mail-list" class="space-y-2 max-h-60 overflow-y-auto text-sm"></div>
@@ -1445,33 +1421,6 @@ createStudio: async (e, existingId = null) => {
                 <p class="text-xs text-slate-700 font-medium leading-relaxed">${App.escapeHTML(m.message)}</p>
             </div>`; 
         }).join('') || '<p class="text-slate-400 italic text-center py-4">All caught up!</p>'; 
-    },
-showInvites: async () => {
-        document.getElementById('nav-dropdown').classList.add('hidden');
-        const res = await fetch(`${API_URL}/api/me/invites`, { headers: { 'Authorization': `Bearer ${App.token}` } });
-        const codes = await res.json();
-        
-        const usedCount = codes.filter(c => c.is_used).length;
-        
-        const html = `
-            <div class="mb-4 text-center">
-                <p class="text-3xl font-black text-purple-600">${10 - usedCount} / 10</p>
-                <p class="text-xs font-bold text-slate-400 uppercase">Invites Remaining</p>
-            </div>
-            <div class="space-y-2 max-h-60 overflow-y-auto">
-                ${codes.map(c => `
-                    <div class="flex justify-between items-center p-3 rounded-lg border ${c.is_used ? 'bg-slate-50 border-slate-200 opacity-75' : 'bg-white border-purple-200'}">
-                        <div class="flex flex-col">
-                            <span class="font-mono font-bold ${c.is_used ? 'text-slate-500 line-through' : 'text-slate-800'}">${c.code}</span>
-                            ${c.is_used ? `<span class="text-[10px] font-bold text-slate-400">Used by ${App.escapeHTML(c.used_by)}</span>` : ''}
-                        </div>
-                        ${!c.is_used ? `<button onclick="navigator.clipboard.writeText('${c.code}'); this.innerText='Copied!'" class="text-xs bg-purple-600 text-white px-3 py-1 rounded font-bold hover:bg-purple-700">Copy</button>` : '<span class="text-xs font-bold text-slate-400">Redeemed</span>'}
-                    </div>
-                `).join('')}
-            </div>
-            <p class="text-[10px] text-slate-400 mt-4 text-center">You have 10 codes total. Once they are gone, you cannot invite anyone else.</p>
-        `;
-        App.showModal("My Invite Codes", html, [{text: "Close"}]);
     },
     toggleMail: async () => { document.getElementById('mail-modal').classList.toggle('hidden'); document.getElementById('mail-count').classList.add('hidden'); await fetch(`${API_URL}/api/notifications/read`, { method: 'POST', headers: { 'Authorization': `Bearer ${App.token}` } }); },
     renderFilterTags: () => { document.getElementById('tag-filters').innerHTML = ['All', ...App.tags].map(t => `<button onclick="App.currTag='${t}';App.loadExplore(App.currSearch)" class="px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border transition ${App.currTag === t ? 'bg-slate-900 text-white border-slate-900 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}">${t}</button>`).join(''); },
@@ -1538,5 +1487,4 @@ checkBanner: async () => {
         sessionStorage.setItem('banner-dismissed', 'true');
     }
 };
-
 window.onload = App.init;
