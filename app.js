@@ -1,4 +1,4 @@
-const API_URL = "https://retailer-white-lamp-surrey.trycloudflare.com";
+const API_URL = "https://retailer-white-lamp-surrey.trycloudflare.com"; // Update port if needed
 
 const App = {
     user: JSON.parse(localStorage.getItem('user')),
@@ -76,15 +76,19 @@ const App = {
     },
 
     // --- INITIALIZATION ---
+// --- INITIALIZATION ---
     init: async () => {
         if (API_URL.includes("INSERT_YOUR")) alert("Setup: Update API_URL in js/app.js");
         App.fetchGuidelines();
-       
+        
+        // --- 1. NEW: Browser Connectivity Listeners (Immediate check) ---
         const handleConnectionChange = () => {
             if (!navigator.onLine) {
+                // User lost internet
                 document.querySelectorAll('section').forEach(el => el.classList.remove('active'));
                 document.getElementById('offline-view').classList.add('active');
             } else {
+                // User came back online
                 if (document.getElementById('offline-view').classList.contains('active')) {
                     document.getElementById('offline-view').classList.remove('active');
                     App.router(); // Reload current view
@@ -94,10 +98,10 @@ const App = {
         window.addEventListener('online', handleConnectionChange);
         window.addEventListener('offline', handleConnectionChange);
         
-
+        // Run check immediately on load
         if (!navigator.onLine) handleConnectionChange();
 
-
+        // --- User Status Logic ---
         if (App.user) {
             document.addEventListener('visibilitychange', () => { 
                 if (document.visibilityState === 'visible') App.setStatus('online', true); 
@@ -171,8 +175,7 @@ const App = {
 
         App.renderNav(); 
         App.renderFilterTags(); 
-        App.renderUploadTags();
-        App.checkBanner(); 
+        App.renderUploadTags(); 
         App.router();
     }, // Correctly ends the init function
 
@@ -775,63 +778,32 @@ router: () => {
     addProjectToStudio: async (pid) => { await fetch(`${API_URL}/api/studios/${App.currId}/add-project`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${App.token}` }, body: JSON.stringify({ project_id: pid }) }); document.getElementById('modal-overlay').classList.add('hidden'); App.loadStudio(App.currId); },
     removeProjectFromStudio: async (sid, pid) => { if(confirm("Remove this project from the studio?")) { await fetch(`${API_URL}/api/studios/${sid}/projects/${pid}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${App.token}` } }); App.loadStudio(sid); } },
 
- loadProjectGame: async (id) => {
+    loadProjectGame: async (id) => {
         App.currId = id;
         App.setLoading(true);
         const res = await fetch(`${API_URL}/api/projects/${id}`, { headers: App.token ? { 'Authorization': `Bearer ${App.token}` } : {} });
         App.setLoading(false);
         if(!res.ok) return window.history.back();
         const p = await res.json();
-        
-        // 1. Setup Game Container
         const container = document.getElementById('game-container');
         container.style.maxWidth = '640px'; container.style.margin = '0 auto';
         container.innerHTML = `<div class="relative w-full h-full group cursor-pointer" onclick="App.playGame('${p.sb3_path}', ${p.width}, ${p.height}, '${p.mod_type}')"><img src="${API_URL + p.thumbnail_path}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition duration-500"><div class="absolute inset-0 flex items-center justify-center"><button class="bg-purple-600 text-white pl-8 pr-6 py-4 rounded-full font-black text-xl shadow-2xl hover:scale-110 hover:bg-purple-500 transition flex items-center gap-3 ring-4 ring-white/20 backdrop-blur-sm"><svg class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Play</button></div></div>`;
         
-        // 2. Setup Sticky Comment Form
-        const commentList = document.getElementById('comment-list');
-
-        // --- FIX: Remove the static duplicate from HTML ---
-        // This looks for the old bar next to the list and removes it
-        let oldBar = commentList.nextElementSibling;
-        if (oldBar && oldBar.classList.contains('sticky-comment-bar') && oldBar.id !== 'comment-form-container') {
-            oldBar.remove();
-        }
-        // --------------------------------------------------
-        
-        // Check if the wrapper already exists
-        let wrapper = document.getElementById('comment-form-wrapper');
-        
-        if (!wrapper) {
-            // Create the permanent home for the comment form
-            wrapper = document.createElement('div');
-            wrapper.id = 'comment-form-wrapper';
-            wrapper.className = 'mt-4 bg-white z-40 relative'; 
-            
-            // This is the actual form HTML
-            wrapper.innerHTML = `
-               <div id="comment-form-container" class="sticky-comment-bar rounded-xl shadow-lg border border-slate-200 bg-white transition-all duration-300">
-                   <!-- Reply Indicator (Hidden by default) -->
-                   <div id="reply-indicator" class="hidden bg-slate-100 border-b border-slate-200 px-4 py-2 flex justify-between items-center rounded-t-xl">
-                       <span class="text-xs font-bold text-slate-500" id="reply-target-name">Replying...</span>
-                       <button onclick="App.cancelReply()" class="text-slate-400 hover:text-red-500 font-bold text-xs">Cancel</button>
-                   </div>
-                   <!-- Input Area -->
-                   <div class="flex gap-2 p-2">
-                       <input id="comment-input" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-pink-500 transition" placeholder="Add a comment..." maxlength="150">
-                       <button id="post-comment-btn" onclick="App.postComment()" class="bg-purple-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-purple-700 transition shadow-md">Post</button>
-                   </div>
-               </div>
-            `;
-            // Insert it AFTER the comment list
-            commentList.parentNode.insertBefore(wrapper, commentList.nextSibling);
-            
-            // Allow pressing "Enter" to submit
-            setTimeout(() => App.setupEnterSubmit('comment-input', App.postComment), 100);
-        } else {
-            // If it exists, ensure it is reset and visible
-            wrapper.style.display = 'block';
-            App.cancelReply(); 
+        // Setup Sticky Comment Form Container in DOM structure
+        const commentListContainer = document.getElementById('comment-list');
+        if (!document.getElementById('comment-form-container')) {
+             const stickyContainer = document.createElement('div');
+             stickyContainer.id = 'comment-form-container';
+             stickyContainer.className = 'sticky-comment-bar rounded-xl shadow-lg border border-slate-200 mt-4 bg-white';
+             stickyContainer.innerHTML = `
+                <div class="flex gap-2 relative">
+                    <button id="reply-cancel-btn" onclick="App.cancelReply()" class="hidden absolute -top-8 right-0 bg-red-50 text-red-500 text-xs px-2 py-1 rounded font-bold">Cancel Reply</button>
+                    <input id="comment-input" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-pink-500 transition" placeholder="Add a comment..." maxlength="150">
+                    <button onclick="App.postComment()" class="bg-purple-600 text-white px-4 rounded-lg font-bold text-sm hover:bg-purple-700 transition">Post</button>
+                </div>
+             `;
+             commentListContainer.parentNode.insertBefore(stickyContainer, commentListContainer.nextSibling);
+             App.setupEnterSubmit('comment-input', App.postComment);
         }
 
         App.renderProjectDetails(p);
@@ -924,100 +896,67 @@ router: () => {
     replyTo: (id, user, context) => { 
         App.replyingTo = { id, user, context }; 
         
-        // 1. Find the form and the comment
-        const form = document.getElementById('comment-form-container');
-        const targetComment = document.getElementById(`c-${id}`); 
-        
-        // 2. Find UI elements to update
+        // Find specific elements
+        const formContainer = document.getElementById('comment-form-container');
+        const targetComment = document.getElementById(`c-${id}`);
         const input = document.getElementById('comment-input');
-        const indicator = document.getElementById('reply-indicator');
-        const label = document.getElementById('reply-target-name');
+        const cancelBtn = document.getElementById('reply-cancel-btn');
 
-        if(form && targetComment) {
-            // 3. Move the form DOM element inside the target comment
-            targetComment.appendChild(form);
+        if(formContainer && targetComment) {
+            // Move form to under the comment
+            targetComment.appendChild(formContainer);
+            formContainer.classList.remove('sticky-comment-bar'); // Remove sticky if it was sticky
+            formContainer.classList.add('mt-2', 'ml-8'); // Indent
             
-            // 4. Update styles (remove sticky footer look, add indentation)
-            form.classList.remove('sticky-comment-bar'); 
-            form.classList.add('ml-8', 'mt-2', 'mb-2'); 
-            
-            // 5. Show the "Replying to..." grey bar
-            if(indicator) indicator.classList.remove('hidden');
-            if(label) label.innerText = `Replying to @${user}`;
-            
-            // 6. Focus the input so they can type immediately
-            if(input) {
-                input.placeholder = `Write a reply...`;
-                input.focus();
-            }
+            input.placeholder = `Replying to @${user}...`;
+            input.focus();
+            cancelBtn.classList.remove('hidden');
         }
     },
     cancelReply: () => { 
         App.replyingTo = null;
         
-        const form = document.getElementById('comment-form-container');
-        const wrapper = document.getElementById('comment-form-wrapper'); // The Home Base
+        const formContainer = document.getElementById('comment-form-container');
+        const listContainer = document.getElementById('comment-list');
         const input = document.getElementById('comment-input');
-        const indicator = document.getElementById('reply-indicator');
+        const cancelBtn = document.getElementById('reply-cancel-btn');
 
-        if(form && wrapper) {
-            // 1. Move the form back to the bottom wrapper
-            wrapper.appendChild(form);
+        if(formContainer && listContainer) {
+            // Move back to main list bottom
+            listContainer.parentNode.insertBefore(formContainer, listContainer.nextSibling);
             
-            // 2. Reset styles to look like a footer bar again
-            form.classList.add('sticky-comment-bar');
-            form.classList.remove('ml-8', 'mt-2', 'mb-2');
-            
-            // 3. Hide the "Replying to..." bar
-            indicator.classList.add('hidden');
+            // Restore styles
+            formContainer.classList.add('sticky-comment-bar');
+            formContainer.classList.remove('mt-2', 'ml-8');
             
             input.placeholder = "Add a comment...";
-            // Optional: input.value = ''; // Uncomment if you want to clear text on cancel
+            input.value = '';
+            cancelBtn.classList.add('hidden');
         }
     },
-postComment: async () => { 
+    postComment: async () => { 
         const inp = document.getElementById('comment-input'); 
-        const btn = document.getElementById('post-comment-btn'); // Uses the ID we added
+        const btn = inp.nextElementSibling; // The Post button
         
-        // Basic validation
-        if(!inp || !inp.value.trim() || (btn && btn.disabled)) return; 
+        if(!inp.value.trim() || btn.disabled) return; 
         
-        if(btn) {
-            btn.disabled = true; 
-            btn.innerText = '...';
-        }
-        
+        btn.disabled = true; 
         const parentId = App.replyingTo?.context === 'project' ? App.replyingTo.id : null; 
         
-        try {
-            const res = await fetch(`${API_URL}/api/comments`, { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${App.token}`}, 
-                body: JSON.stringify({ project_id: App.currId, content: inp.value, parent_id: parentId }) 
-            }); 
-            
-            if(res.ok) { 
-                inp.value = ''; 
-                
-                // IMPORTANT: Move form back to safety BEFORE refreshing the list
-                App.cancelReply(); 
-                
-                App.commentPage = 0; 
-                App.loadComments('project', App.currId, 'comment-list', true); 
-                App.updateProjectStats(); 
-            } else {
-                const err = await res.json();
-                App.alert(err.error || "Failed to post.");
-            }
-        } catch(e) {
-            App.alert("Connection Error");
-        }
+        const res = await fetch(`${API_URL}/api/comments`, { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${App.token}`}, 
+            body: JSON.stringify({ project_id: App.currId, content: inp.value, parent_id: parentId }) 
+        }); 
         
-        // Reset button
-        if(btn) {
-            btn.innerText = 'Post';
-            btn.disabled = false; 
-        }
+        if(res.ok) { 
+            inp.value = ''; 
+            App.cancelReply(); // Resets form position
+            App.commentPage = 0; 
+            App.loadComments('project', App.currId, 'comment-list', true); 
+            App.updateProjectStats(); 
+        } 
+        btn.disabled = false; 
     },
     toggleLike: async () => { if(!App.token) return window.location.hash = '#auth'; await fetch(`${API_URL}/api/projects/${App.currId}/like`, { method: 'POST', headers: { 'Authorization': `Bearer ${App.token}` } }); App.updateProjectStats(); },
     toggleFavorite: async () => { if(!App.token) return window.location.hash = '#auth'; await fetch(`${API_URL}/api/projects/${App.currId}/favorite`, { method: 'POST', headers: { 'Authorization': `Bearer ${App.token}` } }); App.updateProjectStats(); },
@@ -1429,63 +1368,6 @@ createStudio: async (e, existingId = null) => {
     timeAgo: (dateStr) => { if(!dateStr) return 'Unknown'; const str = dateStr.endsWith('Z') ? dateStr : dateStr.replace(' ', 'T') + 'Z'; const diff = (new Date() - new Date(str)) / 1000; if(isNaN(diff)) return 'Unknown'; if(diff < 60) return 'Just now'; if(diff < 3600) return Math.floor(diff/60) + 'm ago'; if(diff < 86400) return Math.floor(diff/3600) + 'h ago'; return Math.floor(diff/86400) + 'd ago'; },
     showModal: (title, bodyHtml, actions) => { document.getElementById('modal-title').innerText = title; document.getElementById('modal-body').innerHTML = bodyHtml; const actDiv = document.getElementById('modal-actions'); actDiv.innerHTML = ''; actions.forEach(a => { const btn = document.createElement('button'); btn.className = `px-4 py-2 rounded-lg text-sm font-bold transition ${a.primary ? 'bg-slate-900 text-white hover:bg-black' : 'text-slate-500 hover:bg-slate-50'}`; btn.innerText = a.text; btn.onclick = () => { if(a.close !== false) document.getElementById('modal-overlay').classList.add('hidden'); if(a.action) a.action(); }; actDiv.appendChild(btn); }); document.getElementById('modal-overlay').classList.remove('hidden'); },
     alert: (msg) => App.showModal("Alert", `<p>${msg}</p>`, [{text: "OK", primary: true}]),
-confirm: (msg, cb) => App.showModal("Confirm", `<p>${msg}</p>`, [{text: "Cancel"}, {text: "Confirm", primary: true, action: cb}]),
-
-setReply: (commentId, username) => {
-        App.replyingTo = commentId; 
-        const input = document.getElementById('comment-input') || document.getElementById('prof-comment-input');
-        const indicator = document.getElementById('reply-indicator');
-        
-        if (input) {
-            input.value = `@${username} `;
-            input.focus();
-            // This scrolls the page back up to the text box so the user can type
-            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        if (indicator) indicator.classList.remove('hidden');
-    },
-
-    cancelReply: () => {
-        App.replyingTo = null;
-        const input = document.getElementById('comment-input') || document.getElementById('prof-comment-input');
-        const indicator = document.getElementById('reply-indicator');
-        
-        if (input) input.value = '';
-        if (indicator) indicator.classList.add('hidden');
-    },
-
-checkBanner: async () => {
-        // Don't show if the user dismissed it this session
-        if (sessionStorage.getItem('banner-dismissed')) return;
-
-        try {
-            const res = await fetch(`${API_URL}/api/banner`);
-            const b = await res.json();
-            const el = document.getElementById('system-banner');
-            const msg = document.getElementById('system-banner-msg');
-            
-            if (b && b.is_active) {
-                el.classList.remove('hidden');
-                msg.innerText = b.message;
-                
-                // Style: No "fixed" or "absolute" so it pushes content down naturally
-                el.className = "w-full relative z-[50] fade-in border-b border-black/10";
-                
-                if (b.style === 'error') el.classList.add('bg-red-600', 'text-white');
-                else if (b.style === 'warning') el.classList.add('bg-yellow-400', 'text-slate-900');
-                else if (b.style === 'rainbow') el.classList.add('bg-slate-900', 'text-white', 'rainbow-text'); 
-                else el.classList.add('bg-purple-600', 'text-white');
-            } else {
-                el.classList.add('hidden');
-            }
-        } catch (e) { console.error(e); }
-    },
-
-    dismissBanner: () => {
-        const el = document.getElementById('system-banner');
-        if (el) el.classList.add('hidden');
-        sessionStorage.setItem('banner-dismissed', 'true');
-    }
+    confirm: (msg, cb) => App.showModal("Confirm", `<p>${msg}</p>`, [{text: "Cancel"}, {text: "Confirm", primary: true, action: cb}]),
 };
 window.onload = App.init;
-
