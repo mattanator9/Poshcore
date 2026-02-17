@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>fruitcore.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .markdown-body h1 { font-size: 1.5em; font-weight: 900; margin-top: 1em; margin-bottom: 0.5em; color: #1e293b; }
+        .markdown-body h2 { font-size: 1.25em; font-weight: 800; margin-top: 1em; margin-bottom: 0.5em; color: #334155; }
+        .markdown-body a { color: #9333ea; font-weight: bold; text-decoration: none; }
+        .markdown-body a:hover { text-decoration: underline; }
+        .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #9333ea; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        [title] { cursor: help; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .rainbow-text { background-image: linear-gradient(to left, violet, indigo, blue, green, orange, red); -webkit-background-clip: text; color: transparent !important; background-clip: text; animation: rainbow 5s linear infinite; background-size: 400%; }
+        @keyframes rainbow { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+        .toggle-checkbox:checked { right: 0; border-color: #9333ea; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #9333ea; }
+        .sticky-comment-bar { position: sticky; bottom: 0; background: white; border-top: 1px solid #e2e8f0; padding: 1rem; z-index: 40; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="app.js" defer></script>
+</head>
+<body class="flex flex-col min-h-screen">
+    <div id="global-loader" class="hidden fixed inset-0 bg-white/50 backdrop-blur-[2px] z-[200] flex items-center justify-center"><div class="bg-white p-4 rounded-full shadow-xl"><div class="loader w-8 h-8"></div></div></div>
+    <div id="modal-overlay" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 fade-in"><div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 modal-enter border border-slate-100 flex flex-col max-h-[85vh]"><h3 id="modal-title" class="text-xl font-black text-slate-900 mb-2"></h3><div id="modal-body" class="text-sm text-slate-600 mb-6 leading-relaxed whitespace-pre-wrap overflow-y-auto no-scrollbar"></div><div id="modal-actions" class="flex gap-3 justify-end mt-auto pt-4 border-t border-slate-100"></div></div></div>
+    <div id="cropper-modal" class="hidden fixed inset-0 bg-black/80 z-[110] flex flex-col items-center justify-center p-4 fade-in"><div class="bg-white p-4 rounded-xl shadow-2xl max-w-4xl w-full max-h-[80vh] flex flex-col"><h3 class="font-bold text-lg mb-2">Adjust Image</h3><div class="flex-1 overflow-hidden bg-slate-100 relative min-h-[300px]"><img id="cropper-img" class="max-w-full block"></div><div class="flex justify-end gap-3 mt-4"><button onclick="App.cancelCrop()" class="px-4 py-2 rounded-lg font-bold text-slate-500 hover:bg-slate-100">Cancel</button><button onclick="App.confirmCrop()" class="px-6 py-2 rounded-lg font-bold bg-purple-600 text-white hover:bg-purple-700">Crop & Save</button></div></div></div>
+
+    <nav class="fixed top-0 w-full bg-white/90 backdrop-blur-md border-b border-slate-100 z-50">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center gap-6">
+            <div class="flex items-center gap-8">
+                <a href="#home" class="text-2xl font-black text-slate-900 tracking-tight hover:text-pink-600 transition">fruitcore<span class="text-pink-500">.</span></a>
+                <!-- REPLACE LINES 38-44 WITH THIS -->
+<div class="hidden md:flex gap-6 text-sm font-bold text-slate-500 items-center">
+    <a href="#home" class="hover:text-slate-900 transition">Explore</a>
+    <a href="#create" class="hover:text-slate-900 transition">Create</a> <!-- NEW BUTTON -->
+    <a href="#upload" class="hover:text-slate-900 transition">Upload</a> <!-- RENAMED -->
+    <button onclick="App.openNews()" class="relative hover:text-slate-900 transition">News<div id="nav-news-badge" class="hidden nav-badge"></div></button>
+    <button onclick="App.showGuidelines()" class="hover:text-slate-900 transition">Rules</button>
+</div>
+            </div>
+
+            <div class="flex-1 max-w-md relative hidden sm:block"><input id="nav-search" type="text" placeholder="Search..." class="w-full bg-slate-100 border-transparent rounded-full py-2 pl-10 pr-4 text-sm font-bold focus:bg-white focus:ring-2 focus:ring-pink-500 transition outline-none" onkeyup="if(event.key === 'Enter') App.loadExplore(this.value)"></div>
+            <div id="nav-auth" class="flex items-center gap-4 relative"></div>
+        </div>
+    </nav>
+    <div class="h-16"></div>
+<div id="system-banner" class="hidden w-full clear-both transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <div class="flex-1 text-center">
+            <span id="system-banner-msg" class="text-sm font-bold"></span>
+        </div>
+        <button onclick="App.dismissBanner()" class="hover:opacity-70 transition-opacity p-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    </div>
+</div>
+
+    <main class="max-w-7xl mx-auto px-6 py-6 pb-24 flex-1 w-full">
+        <section id="home-view" class="fade-in">
+            <div class="flex gap-4 mb-6 border-b border-slate-200 pb-2">
+                <button onclick="App.switchExploreTab('projects')" id="tab-projects" class="text-sm font-bold text-slate-900 border-b-2 border-slate-900 pb-2">Projects</button>
+                <button onclick="App.switchExploreTab('studios')" id="tab-studios" class="text-sm font-bold text-slate-400 hover:text-slate-900 pb-2">Studios</button>
+                <button onclick="App.switchExploreTab('users')" id="tab-users" class="text-sm font-bold text-slate-400 hover:text-slate-900 pb-2">Users</button>
+            </div>
+            <div id="project-filters" class="flex gap-2 mb-4 overflow-x-auto no-scrollbar"></div>
+            <div id="explore-tags-container" class="mb-4"><div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar" id="tag-filters"></div></div>
+            <div id="explore-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+            <div id="load-more-container" class="mt-8 text-center hidden"><button onclick="App.loadMoreExplore()" class="bg-white border border-slate-200 px-6 py-2 rounded-full text-sm font-bold text-slate-600 hover:bg-slate-50 shadow-sm transition">Load More</button></div>
+        </section>
+
+        <section id="news-view" class="fade-in max-w-3xl mx-auto"><div class="flex items-center gap-3 mb-6"><h1 class="text-3xl font-black text-slate-900">Community News</h1><span class="bg-slate-900 text-white text-xs px-2 py-1 rounded font-bold">Latest Updates</span></div><div id="news-grid" class="space-y-8"></div></section>
+
+        <section id="mystuff-view" class="fade-in max-w-6xl mx-auto">
+            <h1 class="text-3xl font-black text-slate-900 mb-6">My Stuff</h1>
+            <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold text-slate-800">My Projects</h2><a href="#upload" class="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold">+ New</a></div>
+            <div id="my-projects-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12"></div>
+            <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold text-slate-800">My Studios</h2><button onclick="App.createStudioModal()" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold">+ New</button></div>
+            <div id="my-studios-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12"></div>
+            <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold text-slate-800">Studios I Follow</h2></div>
+            <div id="my-followed-studios-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+            <div class="flex justify-between items-center mb-4 mt-8"><h2 class="text-xl font-bold text-slate-800">Studio Invites</h2></div>
+            <div id="my-studio-invites" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+        </section>
+
+        <section id="upload-view" class="fade-in max-w-6xl mx-auto py-10">
+            <h1 id="upload-title" class="text-3xl font-black text-slate-900 mb-6">Create Project</h1>
+            <div id="remix-alert" class="hidden bg-purple-50 border border-purple-200 text-purple-800 p-4 rounded-xl mb-6 flex justify-between items-center"><span>🔄 You are remixing a project.</span><button onclick="App.cancelRemix()" class="text-xs font-bold underline hover:text-purple-900">Cancel Remix</button></div>
+            <div id="edit-alert" class="hidden bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl mb-6 flex justify-between items-center"><span>✏️ You are editing an existing project.</span><a href="#mystuff" onclick="App.editingId=null" class="text-xs font-bold underline hover:text-blue-900">Cancel Edit</a></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <form id="upload-form" onsubmit="App.handleUpload(event)" class="space-y-6">
+                    <div class="flex gap-4"><div class="bg-blue-50 border border-blue-100 p-4 rounded-xl flex-1"><p class="text-xs font-bold text-blue-800 uppercase mb-1">File Limits</p><p class="text-sm text-blue-600">Unverified: 200MB • Verified: 700MB</p></div><div class="bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col items-center justify-center"><label class="text-xs font-bold uppercase text-slate-400 mb-1">Engine</label><div class="relative inline-block w-32 select-none transition duration-200 ease-in"><input type="checkbox" name="mod_toggle" id="mod-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer border-slate-300"/><label for="mod-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-slate-300 cursor-pointer text-[10px] font-bold text-white flex justify-between items-center px-2"><img src="/assets/turbowarp.png" alt="TW" class="w-4 h-4 object-contain"><img src="/assets/penguinmod.png" alt="PM" class="w-4 h-4 object-contain"></label></div></div></div>
+                    <div><label class="text-xs font-bold uppercase text-slate-400">Title</label><input name="title" oninput="document.getElementById('prev-title').innerText=this.value" id="inp-title" required class="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold focus:border-pink-500 outline-none"></div>
+                    <div><label class="text-xs font-bold uppercase text-slate-400 mb-2 block">Tags</label><div class="flex flex-wrap gap-2" id="upload-tags"></div><input type="hidden" name="tags" id="inp-tags"></div>
+                    <div><label class="text-xs font-bold uppercase text-slate-400">Description</label><textarea name="description" required rows="3" class="w-full p-3 bg-white border border-slate-200 rounded-xl focus:border-pink-500 outline-none"></textarea></div>
+                    <div class="grid grid-cols-2 gap-4"><div><label class="text-xs font-bold uppercase text-slate-400">Width</label><input name="width" type="number" value="480" class="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold mt-1"></div><div><label class="text-xs font-bold uppercase text-slate-400">Height</label><input name="height" type="number" value="360" class="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold mt-1"></div></div>
+                    <div class="grid grid-cols-2 gap-4"><div><label class="text-xs font-bold uppercase text-slate-400">Game (.sb3 / .pmp)</label><input name="sb3" type="file" accept=".sb3,.pmp" class="w-full text-xs mt-2"></div><div><label class="text-xs font-bold uppercase text-slate-400">Thumbnail</label><input name="thumbnail" type="file" accept="image/*" class="w-full text-xs mt-2" onchange="App.initCrop(this, 4/3, 'thumbnail')"></div></div>
+                    <button type="submit" id="upload-btn" class="w-full bg-slate-900 text-white py-4 rounded-xl font-bold btn-bounce hover:bg-black transition flex justify-center items-center gap-2">Publish</button>
+                </form>
+                <div class="sticky top-24 h-fit hidden md:block"><div class="bg-white rounded-xl overflow-hidden shadow-lg border border-slate-100 max-w-sm"><div class="aspect-[4/3] bg-slate-100 overflow-hidden relative"><img id="prev-img" src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22360%22%20viewBox%3D%220%200%20480%20360%22%20fill%3D%22%23f1f5f9%22%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20font-family%3D%22sans-serif%22%20font-size%3D%2224%22%20fill%3D%22%2394a3b8%22%20dominant-baseline%3D%22middle%22%20text-anchor%3D%22middle%22%3EPreview%3C%2Ftext%3E%3C%2Fsvg%3E" class="w-full h-full object-cover"></div><div class="p-4"><h3 class="font-bold text-slate-900 truncate" id="prev-title">Your Title Here</h3></div></div></div>
+            </div>
+        </section>
+
+        <section id="studio-view" class="fade-in">
+            <div id="stu-banner" class="w-full h-48 bg-slate-200 rounded-2xl bg-cover bg-center mb-16 relative shadow-inner"></div>
+            <div class="px-4 -mt-16 flex flex-col md:flex-row items-end justify-between gap-6 mb-8 relative z-10">
+                <div class="flex items-end gap-6">
+                    <img id="stu-thumb" class="w-32 h-32 rounded-xl object-cover bg-slate-100 border-4 border-white shadow-md">
+                    <div class="mb-2">
+                        <div class="flex items-center gap-2 mb-1"><h1 id="stu-title" class="text-3xl font-black text-slate-900"></h1></div>
+                        <p class="text-xs font-bold text-slate-400 uppercase mb-1" id="stu-date"></p>
+                        <p id="stu-desc" class="text-slate-600 text-sm max-w-lg mb-2"></p>
+                        <div class="flex items-center gap-2"><span class="text-xs text-slate-400 font-bold uppercase">Host:</span><img id="stu-owner-img" class="w-5 h-5 rounded-full"><span id="stu-owner-name" class="text-xs font-bold text-slate-500 flex items-center"></span></div>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <button id="stu-edit-btn" onclick="App.editStudioModal()" class="hidden bg-slate-900 text-white px-6 py-2 rounded-lg font-bold text-sm">Edit Studio</button>
+                    <div class="flex gap-2"><button id="stu-join-btn" onclick="App.joinStudio()" class="bg-purple-600 text-white px-4 py-2 rounded-lg font-bold text-sm">Join</button><button id="stu-invite-btn" onclick="App.inviteToStudioModal()" class="hidden bg-purple-50 text-purple-600 border border-purple-200 px-4 py-2 rounded-lg font-bold text-sm hover:bg-purple-100">Invite</button><button id="stu-follow-btn" onclick="App.toggleStudioFollow()" class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold text-sm">Follow</button><button onclick="App.reportModal('studio', App.currId)" class="bg-red-50 text-red-400 border border-red-100 px-4 py-2 rounded-lg font-bold text-sm hover:bg-red-100">Report</button></div>
+                    <div class="flex gap-2"><button id="stu-add-btn" onclick="App.addToStudioModal()" class="flex-1 bg-slate-100 text-slate-700 px-4 py-2 rounded-lg font-bold text-sm">Add Project</button><button id="stu-adopt-btn" onclick="App.adoptStudioTag()" class="hidden flex-1 bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm">Adopt Tag</button></div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <!-- Sidebar -->
+                <div class="md:col-span-1 space-y-6">
+                     <!-- Navigation Tabs -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col gap-2">
+                        <button onclick="App.switchStudioTab('projects')" id="stu-tab-projects" class="text-left px-3 py-2 rounded-lg text-sm font-bold transition">Projects</button>
+                        <button onclick="App.switchStudioTab('hype')" id="stu-tab-hype" class="text-left px-3 py-2 rounded-lg text-sm font-bold transition">Hype Zone</button>
+                        <button onclick="App.switchStudioTab('settings')" id="stu-tab-settings" class="hidden text-left px-3 py-2 rounded-lg text-sm font-bold transition">Settings</button>
+                        <button onclick="App.switchStudioTab('members')" id="stu-tab-members" class="text-left px-3 py-2 rounded-lg text-sm font-bold transition">Members</button>
+                    </div>
+
+                    <!-- Channels -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="font-bold text-slate-400 text-xs uppercase">Channels</h4>
+                            <button id="stu-add-channel-btn" onclick="App.addChannelModal()" class="hidden text-slate-400 hover:text-purple-600 text-lg font-bold">+</button>
+                        </div>
+                        <div id="stu-channels-list" class="flex flex-col gap-1"></div>
+                    </div>
+                </div>
+
+                <!-- Main Content -->
+                <div class="md:col-span-3 min-h-[500px]">
+                    <div id="stu-projects-area"><div id="stu-projects" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div></div>
+                    
+                    <div id="stu-chat-area" class="hidden flex flex-col h-[600px] bg-white border border-slate-200 rounded-xl overflow-hidden relative">
+                         <div class="bg-slate-50 border-b border-slate-100 p-4 flex justify-between items-center"><h3 id="stu-channel-name" class="font-bold text-slate-900"># general</h3><button id="stu-del-channel-btn" class="hidden text-red-500 text-xs font-bold hover:underline">Delete Channel</button></div>
+                         <div id="stu-comments-list" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+                         <div class="p-4 bg-white border-t border-slate-100 relative">
+                             <div class="flex gap-2">
+                                <input id="stu-comment-input" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500 transition" placeholder="Send a message...">
+                                <button onclick="App.postStudioComment()" class="bg-purple-600 text-white px-4 rounded-lg font-bold text-sm hover:bg-purple-700 transition">Send</button>
+                             </div>
+                         </div>
+                    </div>
+
+                    <div id="stu-members-area" class="hidden"><h3 class="font-bold text-slate-900 mb-4">Members</h3><div id="stu-members" class="space-y-2"></div></div>
+
+                    <div id="stu-hype-area" class="hidden">
+                        <div class="bg-white border border-slate-200 rounded-xl p-6 mb-6 relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-full h-1 bg-slate-100"><div id="stu-hype-fill" class="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-1000 w-0"></div></div>
+                            <div class="flex justify-between items-center mt-2">
+                                <div><h3 class="text-2xl font-black text-slate-900 flex items-center gap-2">🚀 <span id="stu-hype-count">0 Hype</span></h3><p class="text-xs text-slate-500 font-bold mt-1">Resets Weekly! Boost to unlock features.</p></div>
+                                <button id="stu-hype-btn" onclick="App.hypeStudio()" class="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold btn-bounce shadow-lg hover:bg-black transition">Hype!</button>
+                            </div>
+                        </div>
+                        <h3 class="font-bold text-slate-900 mb-4">Hype Milestones</h3>
+                        <div id="stu-milestones-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                    </div>
+                    <div id="stu-settings-area" class="hidden">
+                         <h3 class="font-bold text-slate-900 mb-4">Studio Tag Settings</h3>
+                         <div class="bg-white border border-slate-200 rounded-xl p-4 mb-8">
+                             <div class="flex flex-col gap-4">
+                                 <div><label class="text-xs font-bold uppercase text-slate-400">Tag Text (Max 6 Chars)</label><input id="stu-tag-text" class="w-full p-2 border rounded mt-1 text-sm font-bold uppercase" maxlength="6"></div>
+                                 <div class="flex gap-4"><div class="flex-1"><label class="text-xs font-bold uppercase text-slate-400">Text Color</label><input id="stu-tag-color" type="color" class="w-full h-10 border rounded mt-1 cursor-pointer"></div><div class="flex-1"><label class="text-xs font-bold uppercase text-slate-400">Font</label><select id="stu-tag-font" class="w-full p-2 border rounded mt-1 text-sm h-10"><option value="sans-serif">Default (Sans)</option><option value="serif">Serif</option><option value="monospace">Monospace</option><option value="'Courier New', Courier, monospace">Courier</option><option value="'Comic Sans MS', cursive">Comic Sans</option><option value="'Verdana', sans-serif">Verdana</option><option value="'Impact', sans-serif">Impact</option><option value="'Georgia', serif">Georgia</option><option value="'Trebuchet MS', sans-serif">Trebuchet MS</option><option value="'Arial Black', sans-serif">Arial Black</option><option value="'Brush Script MT', cursive">Brush Script</option></select></div></div>
+                                 <button onclick="App.updateStudioTag()" class="bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm w-full">Save Tag Style</button>
+                             </div>
+                             <p class="text-xs text-slate-400 mt-2">Verified Hosts get a Rainbow Effect automatically! (Disable in Profile Settings)</p>
+                         </div>
+
+                         <h3 class="font-bold text-slate-900 mb-4">Milestone Configuration</h3>
+                         <div id="stu-milestone-config" class="bg-white border border-slate-200 rounded-xl p-4 mb-8 space-y-2"></div>
+
+                         <h3 class="font-bold text-slate-900 mb-4">Role Permissions</h3>
+                         <div id="stu-roles-list" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="project-view" class="fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <button onclick="window.history.back()" class="text-xs font-bold text-slate-400 hover:text-slate-900 uppercase tracking-wider">← Back</button>
+                <div class="flex gap-3"><button onclick="App.remixProject()" class="text-xs font-bold text-purple-600 hover:text-purple-800 uppercase tracking-wider bg-purple-50 px-3 py-1 rounded">🔄 Remix</button><button onclick="App.reportModal('project', App.currId)" class="text-xs font-bold text-red-300 hover:text-red-500 uppercase tracking-wider">⚐ Report</button></div>
+            </div>
+            <div id="game-container" class="flex justify-center items-center bg-black rounded-xl overflow-hidden shadow-xl ring-4 ring-slate-900/5 aspect-[4/3] relative"></div>
+            <div class="mt-6 flex justify-between items-start">
+                <div><h1 id="p-title" class="text-3xl font-black text-slate-900"></h1><a id="p-remix-link" href="#" class="hidden text-xs font-bold text-slate-400 mt-1 hover:text-purple-600 block">↪ Remix of...</a><p id="p-date" class="text-xs font-bold text-slate-400 mt-1"></p><div class="flex items-center gap-4 mt-2"><a id="p-author-link" class="flex items-center gap-2 cursor-pointer hover:opacity-75 transition"><img id="p-author-img" class="w-8 h-8 rounded-full bg-slate-200 object-cover"><span class="text-sm font-bold text-purple-600 flex items-center" id="p-author"></span></a><button id="p-follow-btn" class="text-xs bg-slate-900 text-white px-3 py-1 rounded-full font-bold hover:bg-black transition">Follow</button></div></div>
+                <div class="flex items-center gap-4"><button onclick="App.toggleFavorite()" class="flex flex-col items-center group btn-bounce"><div id="fav-icon-bg" class="w-12 h-12 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center transition group-hover:bg-yellow-400 group-hover:text-white"><svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></div><span id="p-favs" class="text-xs font-bold text-slate-400 mt-1">0</span></button><button onclick="App.toggleLike()" class="flex flex-col items-center group btn-bounce"><div id="like-icon-bg" class="w-12 h-12 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center transition group-hover:bg-pink-500 group-hover:text-white"><svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></div><span id="p-likes" class="text-xs font-bold text-slate-400 mt-1">0</span></button><div class="flex flex-col items-center"><div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></div><span id="p-views" class="text-xs font-bold text-slate-400 mt-1">0</span></div></div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
+                <div class="lg:col-span-2">
+    <p id="p-desc" class="text-slate-600 bg-white p-6 rounded-xl border border-slate-100 whitespace-pre-wrap leading-relaxed shadow-sm mb-8"></p>
+    
+    <h3 id="p-comments-title" class="font-bold text-slate-900 mb-4 text-xl">Comments</h3>
+
+    <div id="comment-form-container" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8">
+        <div class="flex gap-4">
+            <div class="flex-1">
+                <textarea id="comment-input" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-purple-500 transition resize-none" rows="3" placeholder="Add a comment..."></textarea>
+                <div class="flex justify-between items-center mt-3">
+                    <span id="reply-indicator" class="text-xs font-bold text-purple-600 hidden">Replying to a comment... <button onclick="App.cancelReply()" class="text-slate-400 ml-2 hover:underline">Cancel</button></span>
+                    <button onclick="App.postComment()" class="ml-auto bg-purple-600 text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-purple-700 transition">Post Comment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="comment-list" class="space-y-4 mb-4"></div>
+</div>
+                <div class="lg:col-span-1"><div class="bg-slate-50 border border-slate-200 rounded-xl p-4 sticky top-24"><h3 class="font-bold text-slate-900 mb-3 text-sm uppercase tracking-wide">Featured In</h3><div id="p-studios-list" class="space-y-2 max-h-[500px] overflow-y-auto pr-1"></div></div></div>
+            </div>
+        </section>
+
+        <section id="profile-view" class="fade-in">
+            <div id="prof-banner" class="w-full h-48 bg-slate-200 rounded-2xl bg-cover bg-center mb-16 relative shadow-inner"></div>
+            <div class="px-4 -mt-16 flex flex-col sm:flex-row items-end justify-between gap-4 mb-8 relative z-10">
+                <div class="flex items-end gap-4"><div id="prof-avatar-container" class="relative"><img id="prof-avatar" class="w-32 h-32 rounded-full border-4 border-white bg-slate-100 object-cover shadow-md"></div><div class="mb-2"><div class="flex items-center gap-2"><h1 id="prof-name" class="text-3xl font-black text-slate-900"></h1><span id="prof-rank" class="px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider bg-slate-200 text-slate-600"></span></div><p id="prof-username-real" class="text-xs text-slate-400 font-bold hidden"></p><p id="prof-joined" class="text-xs font-bold text-slate-400 mt-1"></p><div class="flex items-center gap-3 mt-1 text-slate-500 text-sm font-bold"><span id="prof-id">ID: #0</span><span>•</span><span id="prof-followers-count">0 Followers</span><span>•</span><span id="prof-following-count">0 Following</span></div><p id="prof-bio" class="text-slate-500 font-medium text-sm max-w-md mt-2"></p></div></div>
+                <div class="flex gap-2"><button onclick="App.reportModal('profile', App.currProfileId)" class="px-4 py-2 rounded-lg font-bold text-sm bg-red-50 text-red-300 hover:bg-red-100 hover:text-red-500">Report</button><button id="block-btn" onclick="App.toggleBlock()" class="hidden px-4 py-2 rounded-lg font-bold text-sm shadow-sm transition bg-white border border-red-200 text-red-400 hover:bg-red-50 hover:text-red-600">Block</button><button id="follow-btn" onclick="App.toggleFollow()" class="hidden px-6 py-2 rounded-lg font-bold text-sm shadow-sm transition"></button><button id="edit-prof-btn" onclick="App.toggleEditProfile()" class="hidden bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-50 shadow-sm transition">Edit Profile</button></div>
+            </div>
+            <div id="prof-announcement" class="hidden mb-8 bg-purple-50 border border-purple-100 rounded-xl p-4 flex gap-4 items-start"><div class="flex-1"><h4 class="text-xs font-bold text-purple-800 uppercase mb-1">📢 Announcement</h4><p id="prof-ann-text" class="text-sm text-slate-800 leading-relaxed"></p></div><img id="prof-ann-img" class="w-24 h-24 object-cover rounded-lg bg-white hidden"></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"><div class="bg-white border border-slate-100 rounded-xl p-4"><div class="flex justify-between items-center mb-3"><h4 class="font-bold text-sm text-slate-900">Followers</h4><button onclick="App.showList('followers')" class="text-xs font-bold text-purple-600 hover:text-purple-700">Show All</button></div><div id="prof-followers-list" class="flex gap-2 overflow-x-auto pb-2 min-h-[40px]"></div></div><div class="bg-white border border-slate-100 rounded-xl p-4"><div class="flex justify-between items-center mb-3"><h4 class="font-bold text-sm text-slate-900">Following</h4><button onclick="App.showList('following')" class="text-xs font-bold text-purple-600 hover:text-purple-700">Show All</button></div><div id="prof-following-list" class="flex gap-2 overflow-x-auto pb-2 min-h-[40px]"></div></div></div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                <div class="lg:col-span-1"><h3 class="text-lg font-bold text-slate-900 mb-4 px-1">What I've been doing</h3><div id="prof-activity-list" class="space-y-2"></div></div>
+                <div class="lg:col-span-2"><h3 class="text-lg font-bold text-slate-900 mb-4 px-1">Projects</h3><div id="prof-projects" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div></div>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900 mb-4 px-1">Favorites</h3><div id="prof-favorites" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
+            <h3 class="text-lg font-bold text-slate-900 mb-4 px-1">Studios I'm In</h3><div id="prof-studios-in" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
+            <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200"><h3 id="prof-comments-title" class="text-lg font-bold text-slate-900 mb-4">Profile Comments</h3><div class="flex gap-2 mb-6">
+    <input id="prof-comment-input" class="flex-1 bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm focus:outline-none" placeholder="Write a message...">
+    <button onclick="App.postProfileComment()" class="bg-purple-600 text-white px-4 rounded-lg font-bold text-sm">Post</button>
+</div><div id="prof-comment-list" class="space-y-4"></div></div>
+        </section>
+
+<!-- AUTH VIEW -->
+    <section id="auth-view" class="pt-24 pb-12 px-4 min-h-screen flex items-center justify-center hidden">
+        <div class="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border border-slate-100 fade-in">
+            <h2 id="auth-title" class="text-3xl font-black text-center mb-6 text-slate-900">Sign In</h2>
+            
+            <form onsubmit="App.handleAuth(event)" class="space-y-4">
+                <!-- Username -->
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Username</label>
+                    <input id="auth-user" type="text" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none focus:border-purple-500 transition text-slate-800">
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Password</label>
+                    <input id="auth-pass" type="password" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none focus:border-purple-500 transition text-slate-800">
+                </div>
+
+                <!-- MISSING FIELDS: DOB & INVITE CODE (Hidden by default) -->
+                <div id="auth-dob-container" class="hidden">
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Date of Birth</label>
+                    <input id="auth-dob" type="date" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none focus:border-purple-500 transition text-slate-800">
+                    <p class="text-[10px] text-slate-400 mt-1">Must be 13+ to join.</p>
+                </div>
+
+                <div id="auth-invite-container" class="hidden">
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Invite Code</label>
+                    <input id="auth-invite" type="text" placeholder="FRUIT-XXXX-XXXX" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none focus:border-purple-500 transition font-mono uppercase text-slate-800">
+                </div>
+
+                <!-- Captcha Container -->
+                <div id="captcha-container" class="hidden justify-center my-4">
+                    <div class="h-captcha" data-sitekey="3cf68d7c-ce88-468a-bfc2-e076e81a80b0"></div>
+                </div>
+
+                <!-- Terms Checkbox (Hidden by default) -->
+                <div id="auth-terms" class="hidden flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <input type="checkbox" id="tos-check" class="mt-1 w-5 h-5 accent-purple-600 rounded cursor-pointer">
+                    <label for="tos-check" class="text-xs text-slate-600 font-bold cursor-pointer select-none">
+                        I agree to the <button type="button" onclick="App.showGuidelines()" class="text-purple-600 hover:underline">Community Guidelines</button>.
+                    </label>
+                </div>
+
+                <button class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold shadow-lg shadow-slate-200 hover:scale-[1.02] active:scale-95 transition">Go</button>
+            </form>
+            
+            <div class="mt-6 text-center border-t border-slate-100 pt-6">
+                <button onclick="App.toggleAuth()" class="text-sm font-bold text-slate-500 hover:text-purple-600 transition">
+                    Switch to <span id="auth-switch-text">Create Account</span> / Sign In
+                </button>
+            </div>
+        </div>
+    </section>
+        
+        <section id="banned-view" class="fade-in text-center py-20 px-4"><div class="max-w-md mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border-2 border-red-500 relative"><div class="bg-red-600 p-6 flex flex-col items-center"><svg class="w-16 h-16 text-white mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15v2m0-8v6m0-8h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><h1 class="text-2xl font-black text-white uppercase tracking-wider">Access Denied</h1><p class="text-red-100 text-xs font-bold uppercase tracking-widest mt-1">You got banned..</p></div><div class="p-8"><div class="bg-red-50 rounded-lg p-4 mb-6 border border-red-100 text-left"><p class="text-xs font-bold text-red-400 uppercase mb-1">here is why we banned you</p><p id="ban-msg" class="text-sm font-bold text-red-900"></p></div><p class="text-sm text-slate-500 mb-8 leading-relaxed">Your account has been banned due to a violation of our Community Guidelines. If you believe this is an error, please contact support on our offical discord (down below in the footer).</p><button onclick="App.logout()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-black transition shadow-lg">Sign Out</button></div></div></section>
+        <section id="offline-view" class="fade-in text-center py-32 px-4">
+    <img src="assets/offline.png" alt="Offline" class="w-48 h-auto mx-auto mb-6 object-contain opacity-80">
+    <h2 class="text-2xl font-bold text-slate-800 mb-2">Server Offline</h2>
+    <p class="text-slate-500 mb-8"> oof.. fruitcore seems to be down.. check our discord server for status updates.</p>
+    <button onclick="window.location.reload()" class="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold hover:bg-black transition">Reload</button>
+</section>
+    </main>
+<section id="create-view" class="fixed inset-0 top-16 z-50 bg-white w-full h-[calc(100vh-4rem)] hidden">
+    <iframe src="https://warp.mistium.com/editor.html" class="w-full h-full border-none block"></iframe>
+</section>
+    <footer class="bg-white border-t border-slate-100 py-12 mt-auto">
+        <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div class="col-span-1 md:col-span-2"><a href="#home" class="text-2xl font-black text-slate-900 tracking-tight hover:text-pink-600 transition block mb-4">fruitcore<span class="text-pink-500">.</span></a><p class="text-sm text-slate-500 font-medium max-w-xs mb-4">A community for creators, game developers, and artists. Build, share, and remix.</p><div class="flex gap-4"><a href="https://discord.gg/F8xUmAFwTg" target="_blank" class="bg-[#5865F2] text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-[#4752c4] transition flex items-center gap-2"><svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.545 2.907a13.227 13.227 0 0 0-3.257-1.011.05.05 0 0 0-.052.025c-.141.25-.297.577-.406.833a12.19 12.19 0 0 0-3.653 0 2.039 2.039 0 0 0-.407-.833.051.051 0 0 0-.052-.025c-1.125.271-2.206.612-3.256 1.011a.041.041 0 0 0-.015.018C.77 5.216.299 7.47.513 9.68a.05.05 0 0 0 .022.035 13.298 13.298 0 0 0 3.995 2.02.05.05 0 0 0 .056-.019c.308-.42.582-.863.818-1.329a.05.05 0 0 0-.026-.065 8.763 8.763 0 0 1-1.24-.593.05.05 0 0 1-.003-.085c.105-.078.21-.16.311-.246a.051.051 0 0 1 .051-.007c2.617 1.196 5.454 1.196 8.041 0a.052.052 0 0 1 .053.007c.1.087.205.169.311.246a.05.05 0 0 1-.003.085 8.552 8.552 0 0 1-1.24.594.05.05 0 0 0-.026.065c.237.466.512.909.82 1.329a.05.05 0 0 0 .056.019 13.285 13.285 0 0 0 4.001-2.02.049.049 0 0 0 .021-.035c.264-2.73-.42-5.07-1.722-7.23a.04.04 0 0 0-.015-.018ZM5.26 8.163c-.783 0-1.427-.72-1.427-1.603 0-.882.632-1.602 1.427-1.602.798 0 1.442.72 1.442 1.602s-.632 1.603-1.442 1.603Zm5.475 0c-.783 0-1.426-.72-1.426-1.603 0-.882.632-1.602 1.426-1.602.798 0 1.442.72 1.442 1.602s-.632 1.603-1.442 1.603Z"/></svg>Join Discord</a></div></div>
+            <div><h4 class="font-bold text-slate-900 mb-4">Discover</h4><ul class="space-y-2 text-sm text-slate-500 font-bold"><li><a href="#home" class="hover:text-purple-600 transition">Trending Games</a></li><li><a href="#news" class="hover:text-purple-600 transition">Community News</a></li><li><a href="#upload" class="hover:text-purple-600 transition">Upload Project</a></li></ul></div>
+            <div><h4 class="font-bold text-slate-900 mb-4">Support</h4><ul class="space-y-2 text-sm text-slate-500 font-bold"><li><button onclick="App.showGuidelines()" class="hover:text-purple-600 transition">Guidelines</button></li><li><button onclick="App.showGuidelines()" class="hover:text-purple-600 transition">Privacy Policy</button></li><li><button onclick="App.showGuidelines()" class="hover:text-purple-600 transition">Terms of Service</button></li></ul></div>
+        </div>
+        <div class="max-w-7xl mx-auto px-6 mt-12 pt-8 border-t border-slate-50 text-center text-xs font-bold text-slate-400">&copy; 2026 Fruitcore. All rights reserved.</div>
+    </footer>
+</div>
+</body>
+</html>
+
+
+
