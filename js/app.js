@@ -1,4 +1,4 @@
-const API_URL = "https://retailer-white-lamp-surrey.trycloudflare.com"; // Update port if needed
+const API_URL = "https://demanding-duck-fort-wish.trycloudflare.com/"; // Update port if needed
 
 const App = {
     user: JSON.parse(localStorage.getItem('user')),
